@@ -53,6 +53,35 @@ pub struct CreateEvent<'info> {
         seeds = [b"event", signer.key().as_ref(), name.as_bytes()],
         bump                          // Calculate the "bump" automatically
     )]
+// 6. CHECK-IN VALIDATION (Sybil Resistance)
+#[derive(Accounts)]
+pub struct CheckIn<'info> {
+    #[account(mut)]
+    pub signer: Signer<'info>, // The Attendee
+
+    // We need to read the Event to increment the counter
+    #[account(
+        mut,
+        seeds = [b"event", event.authority.key().as_ref(), event.name.as_bytes()],
+        bump = event.bump
+    )]
+    pub event: Account<'info, Event>,
+
+    // THE SYBIL RESISTANCE LOCK 🔒
+    // We create a PDA using ["badge", event_address, attendee_address].
+    // If this specific combination already exists, Anchor REJECTS the transaction.
+    // This makes it impossible to check in twice.
+    #[account(
+        init,
+        payer = signer,
+        space = 8 + 32 + 32 + 1, // Discriminator + Pubkey + Pubkey + Bump
+        seeds = [b"badge", event.key().as_ref(), signer.key().as_ref()],
+        bump
+    )]
+    pub attendee_account: Account<'info, Attendee>,
+
+    pub system_program: Program<'info, System>,
+}
     pub event: Account<'info, Event>,
 
     #[account(mut)]
