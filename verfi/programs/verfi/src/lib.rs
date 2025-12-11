@@ -61,7 +61,8 @@ pub struct RegisterAttendee<'info>{
     //it checks event accont first
     //as in does this PDA exists or not,does seed matches or bump matches??
     #[account(
-        seeds=[b"event",event_authority.as_ref(),event_name.as_bytes()],
+        mut,
+        seeds=[b"event",event.authority.as_ref(),event.name.as_bytes()],
         bump = event.bump
     )]
  pub event : Account<'info,Event>,
