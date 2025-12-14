@@ -13,6 +13,7 @@ pub mod verfi {
         event.authority = ctx.accounts.signer.key();
         event.name = name;
         event.bump = ctx.bumps.event;
+        event.total_minted = 0;
 
         msg!("Event Created: {}", event.name);
         Ok(())
@@ -21,11 +22,12 @@ pub mod verfi {
         ctx: Context<RegisterAttendee>,
     ) -> Result<()>{
         let attendee_account= &mut ctx.accounts.attendee_account;
-        let event = &ctx.accounts.event;
+        let event = &mut ctx.accounts.event;
         let signer = &ctx.accounts.signer;
         attendee_account.event= event.key();
         attendee_account.attendee= signer.key();
         attendee_account.bump= ctx.bumps.attendee_account;
+        event.total_minted +=1;
        msg!("Attendee Registered:{}",attendee_account.attendee);
        Ok(())
     }
@@ -86,6 +88,7 @@ pub struct Event {
     pub authority: Pubkey,
     pub name: String,
     pub bump: u8,
+    pub total_minted : u64,
 }
 
 #[account]
