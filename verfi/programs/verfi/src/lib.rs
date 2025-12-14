@@ -14,6 +14,7 @@ pub mod verfi {
     pub fn create_event(
         ctx: Context<CreateEvent>,
         name: String,
+        uri : String,
     ) -> Result<()> {
         let event = &mut ctx.accounts.event;
         // We set the data on the blockchain
@@ -21,6 +22,7 @@ pub mod verfi {
         event.name = name;
         event.bump = ctx.bumps.event;
         event.total_minted = 0;
+        event.uri= uri;
 
         msg!("Event Created: {}", event.name);
         Ok(())
@@ -32,7 +34,7 @@ pub mod verfi {
         let event = &mut ctx.accounts.event;
         let signer = &ctx.accounts.signer;
         let metadata_account = &ctx.accounts.metadata_account;
-        
+
         attendee_account.event= event.key();
         attendee_account.attendee= signer.key();
         attendee_account.bump= ctx.bumps.attendee_account;
@@ -54,8 +56,16 @@ pub mod verfi {
             },
             signer_seeds,//Proof we are the event
         );
-        token:mint_to(mint_ctx,1)?;
-
+        token::mint_to(mint_ctx,1)?;
+        let data = DataV2{
+            name : event.name.clone(),
+            symbol:"POAP".to_string(),
+            uri: event.uri.clone(),
+            seller_fee_basis_points:0.
+            creators:None,
+            collection:None,
+            uses:None,
+        }
         let metadata_ctx = CpiContext::new_with_signer(
             ctx.accounts.metadata_program.to_account_info(),
             CreateMetadataAccountsV3 {
@@ -69,13 +79,20 @@ pub mod verfi {
             },
             signer_seeds
         );
+        create_metadata_accounts_v3(
+            metadata_ctx,
+            data,
+            false,
+            true,
+            None
+        )
        msg!("Attendee Registered:{}",attendee_account.attendee);
        Ok(())
     }
 }
 
 #[derive(Accounts)]
-#[instruction(name: String)]
+#[instruction(name: String,uri:String)]
 pub struct CreateEvent<'info> {
     #[account(
         init,
@@ -116,6 +133,13 @@ pub struct RegisterAttendee<'info>{
         //and a specific person
         seeds = [b"badge", event.key().as_ref(), signer.key().as_ref()],
         bump,
+    )]
+    pub attendee_account:Account<'info,Attendee>,
+    #[account(
+        init,
+        payer=signer,
+        seeds=[b"mint",event.key().as_ref(),signer.key().as_ref()],
+        bump,
         mint::decimals=0,
         mint::authority=event,
         mint::freeze_authority=event,
@@ -127,12 +151,26 @@ pub struct RegisterAttendee<'info>{
         associated_token::mint=mint,
         associated_token::authority=signer,
     )]
-pub token_account: Account<'info,TokenAccount>,
+
+    //check the seeds to ensure this is the correctr address
+    #[account(
+        mut,
+        seeds=[
+            b"metadata",
+            metadata_program.key().as_ref(),
+            mint.key().as_ref(),
+        ],
+        bump,
+        seeds::program=metadata_program.key()
+    )]
+    pub metadata_account: UncheckedAccount<'info>,
+    pub token_account: Account<'info,TokenAccount>,
 
     pub attendee_account: Account<'info,Attendee>,
     pub system_program: Program<'info,System>,
     pub token_program: Program<'info,Token>,
     pub rent: Sysvar<'info,Rent>,
+    pub metadata_program:Program<'info,Metaplex>,
     pub associated_token_program: Program<'info,anchor_spl::associated_token::AssociatedToken>,
 }
 
@@ -141,6 +179,7 @@ pub struct Event {
     pub authority: Pubkey,
     pub name: String,
     pub bump: u8,
+    pub uri : String,
     pub total_minted : u64,
 }
 
