@@ -1,4 +1,11 @@
 use anchor_lang::prelude::*;
+use anchor_spl::token::{self, Token, Mint, TokenAccount, MintTo};
+use anchor_spl::metadata::{
+    create_metadata_accounts_v3,
+    CreateMetadataAccountsV3,
+    Metadata as Metaplex,
+};
+use mpl_token_metadata::types::DataV2;
 declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
 //marks the module where the solana instructions live
 #[program]
@@ -75,12 +82,33 @@ pub struct RegisterAttendee<'info>{
         //this badge belongs to a specific event
         //and a specific person
         seeds = [b"badge", event.key().as_ref(), signer.key().as_ref()],
+        bump,
+        mint::decimals=0,
+        mint::authority=event,
+        mint::freeze_authority=event,
+    )]
+    pub mint: Account<'info,Mint>,
+    #[account(
+        init_if_needed,
+        payer = signer,
+        associated_token::mint=mint,
+        associated_token::authority=signer,
+    )]
+pub token_account: Account<'info,TokenAccount>,
+#[account(
+        init,
+        payer = signer,
+        space = 8 + 32 + 32 + 1,
+        seeds = [b"badge", event.key().as_ref(), signer.key().as_ref()],
         bump
     )]
 
     pub attendee_account: Account<'info,Attendee>,
     pub system_program: Program<'info,System>,
-
+    pub token_program: Program<'info,Token>,
+    pub rent: Sysvar<'info,Rent>,
+    pub associated_token_program: Program<'info,anchor_spl::associated_token::AssociatedToken>,
+    
 }
 
 #[account]
