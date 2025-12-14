@@ -31,14 +31,47 @@ pub mod verfi {
         let attendee_account= &mut ctx.accounts.attendee_account;
         let event = &mut ctx.accounts.event;
         let signer = &ctx.accounts.signer;
+        let metadata_account = &ctx.accounts.metadata_account;
+        
         attendee_account.event= event.key();
         attendee_account.attendee= signer.key();
         attendee_account.bump= ctx.bumps.attendee_account;
         event.total_minted +=1;
+
+        let authority_key = event.authority.key();
+        let name_bytes = event.name.as_bytes();
+        let event_bump = event.bump;
+        let seeds = &[b"event", authority_key.as_ref(), name_bytes, &[event_bump]];
+        let signer_seeds n= &[&seeds[..]];
+
+        let mint_ctx=CpiContext::new_with_signer(
+            ctx.accounts.token_program.to_account_info(),
+            //anchor internally recreates the seeeds using to_account_info()
+            MintTo{
+                mint: ctx.accounts.mint.to_account_info(),
+                to: ctx.accounts.token_account.to_account_info(),
+                authority: event.to_account_info(),//the event itself
+            },
+            signer_seeds,//Proof we are the event
+        );
+        token:mint_to(mint_ctx,1)?;
+
+        let metadata_ctx = CpiContext::new_with_signer(
+            ctx.accounts.metadata_program.to_account_info(),
+            CreateMetadataAccountsV3 {
+                metadata: ctx.accounts.metadata_account.to_account_info(),
+                mint: ctx.accounts.mint.to_account_info(),
+                mint_authority: event.to_account_info(),
+                payer: ctx.accounts.signer.to_account_info(),
+                update_authority: event.to_account_info(),
+                system_program: ctx.accounts.system_program.to_account_info(),
+                rent: ctx.accounts.rent.to_account_info(),
+            },
+            signer_seeds
+        );
        msg!("Attendee Registered:{}",attendee_account.attendee);
        Ok(())
     }
-
 }
 
 #[derive(Accounts)]
@@ -95,20 +128,12 @@ pub struct RegisterAttendee<'info>{
         associated_token::authority=signer,
     )]
 pub token_account: Account<'info,TokenAccount>,
-#[account(
-        init,
-        payer = signer,
-        space = 8 + 32 + 32 + 1,
-        seeds = [b"badge", event.key().as_ref(), signer.key().as_ref()],
-        bump
-    )]
 
     pub attendee_account: Account<'info,Attendee>,
     pub system_program: Program<'info,System>,
     pub token_program: Program<'info,Token>,
     pub rent: Sysvar<'info,Rent>,
     pub associated_token_program: Program<'info,anchor_spl::associated_token::AssociatedToken>,
-    
 }
 
 #[account]
