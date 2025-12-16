@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Token, Mint, TokenAccount, MintTo};
 use anchor_spl::metadata::{
-    create_metadata_accounts_v3,
+    Create_metadata_accounts_v3,
     CreateMetadataAccountsV3,
     Metadata as Metaplex,
 };
@@ -44,7 +44,7 @@ pub mod verfi {
         let name_bytes = event.name.as_bytes();
         let event_bump = event.bump;
         let seeds = &[b"event", authority_key.as_ref(), name_bytes, &[event_bump]];
-        let signer_seeds n= &[&seeds[..]];
+        let signer_seeds= &[&seeds[..]];
 
         let mint_ctx=CpiContext::new_with_signer(
             ctx.accounts.token_program.to_account_info(),
@@ -61,7 +61,7 @@ pub mod verfi {
             name : event.name.clone(),
             symbol:"POAP".to_string(),
             uri: event.uri.clone(),
-            seller_fee_basis_points:0.
+            seller_fee_basis_points:0,
             creators:None,
             collection:None,
             uses:None,
@@ -77,7 +77,7 @@ pub mod verfi {
                 system_program: ctx.accounts.system_program.to_account_info(),
                 rent: ctx.accounts.rent.to_account_info(),
             },
-            signer_seeds
+            signer_seeds,
         );
         create_metadata_accounts_v3(
             metadata_ctx,
@@ -151,6 +151,10 @@ pub struct RegisterAttendee<'info>{
         associated_token::mint=mint,
         associated_token::authority=signer,
     )]
+    #[account(mut)]
+    pub metadata_account: UncheckedAccount<'info>,
+
+    pub metadata_program: UncheckedAccount<'info>,
 
     //check the seeds to ensure this is the correctr address
     #[account(
@@ -166,7 +170,6 @@ pub struct RegisterAttendee<'info>{
     pub metadata_account: UncheckedAccount<'info>,
     pub token_account: Account<'info,TokenAccount>,
 
-    pub attendee_account: Account<'info,Attendee>,
     pub system_program: Program<'info,System>,
     pub token_program: Program<'info,Token>,
     pub rent: Sysvar<'info,Rent>,
