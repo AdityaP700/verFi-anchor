@@ -146,7 +146,7 @@ pub struct RegisterAttendee<'info>{
     )]
     pub mint: Account<'info,Mint>,
     #[account(
-        init_if_needed,
+        
         payer = signer,
         associated_token::mint=mint,
         associated_token::authority=signer,
@@ -168,7 +168,12 @@ pub struct RegisterAttendee<'info>{
         seeds::program=metadata_program.key()
     )]
     pub metadata_account: UncheckedAccount<'info>,
-    pub token_account: Account<'info,TokenAccount>,
+    #[account(
+    mut,
+    associated_token::mint = mint,
+    associated_token::authority = signer
+)]
+pub token_account: Account<'info, TokenAccount>,
 
     pub system_program: Program<'info,System>,
     pub token_program: Program<'info,Token>,
