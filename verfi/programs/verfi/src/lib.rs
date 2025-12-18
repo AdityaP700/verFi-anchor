@@ -1,11 +1,15 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token::{self, Token, Mint, TokenAccount, MintTo};
+use anchor_spl::{
+    token::{self, Mint, MintTo, Token, TokenAccount},
+    associated_token::AssociatedToken,
+};
 use anchor_spl::metadata::{
-    Create_metadata_accounts_v3,
+    create_metadata_accounts_v3,
     CreateMetadataAccountsV3,
     Metadata as Metaplex,
 };
 use mpl_token_metadata::types::DataV2;
+
 declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
 //marks the module where the solana instructions live
 #[program]
@@ -146,7 +150,7 @@ pub struct RegisterAttendee<'info>{
     )]
     pub mint: Account<'info,Mint>,
     #[account(
-        
+
         payer = signer,
         associated_token::mint=mint,
         associated_token::authority=signer,
